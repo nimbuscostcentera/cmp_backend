@@ -3,7 +3,7 @@ from django.urls import path
 
 
 from . import views
-from .views import   Layout10List, Layout1List, Layout9List,SpcpmasterList,Layout2List,Layout3List,Layout4List,Layout5List,Layout6List,Layout7List,Layout8List, UnitMasterDetail, UnitMasterList
+from .views import   Layout10List, Layout13List, Layout1List, Layout9List,SpcpmasterList,Layout2List,Layout3List,Layout4List,Layout5List,Layout6List,Layout7List,Layout8List, UnitMasterDetail, UnitMasterList
 from .views import HelloAPI
 urlpatterns = [
     path('', views.home_view, name='home'),  # root URL
@@ -36,6 +36,6 @@ urlpatterns = [
     path("layout10/<int:pk>/", Layout10List.as_view()),
     # path("layout11/", Layout11List.as_view()),
     # path("layout11/<int:pk>/", Layout11List.as_view()),
-    # path("layout13/",Layout13List.as_view()),
-    # path("layout13/<int:pk>/",Layout13List.as_view())
+    path("layout13/",Layout13List.as_view()),
+    path("layout13/<int:pk>/",Layout13List.as_view())
 ]

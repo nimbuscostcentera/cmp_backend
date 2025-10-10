@@ -1,4 +1,5 @@
 import json
+from pyexpat import model
 from urllib import request
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
@@ -632,9 +633,11 @@ class Layout9List(APIView, MasterMixin):
         if mtype == "itemtype" and not pk:
             header_id = request.query_params.get("ID_Header")
             if not header_id:
-                return Response({"message": "ID_Header is required for itemtype fetch"},
+                return Response({"message": "ID_Header is required for item type fetch"},
                                 status=status.HTTP_400_BAD_REQUEST)
-            queryset = model.objects.filter(ID_Header_id=header_id)
+            # queryset = model.objects.filter(ID_Header_id=header_id)
+            queryset = model.objects.filter(ID_Header_id=header_id).order_by("DesignID")
+            
             return Response(serializer(queryset, many=True).data)
 
         # Default: fetch list or detail by pk
@@ -823,3 +826,71 @@ class UnitMasterDetail(APIView):
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
         unit.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    
+class Layout12List(APIView, MasterMixin):
+    TYPE_MAP = {
+        "sysm": (SystemMaster, SystemMasterSerializer),
+    }
+    # Methods same pattern as above...
+    def get(self, request, pk=None):
+        mtype = request.query_params.get("type")
+        model, serializer = self.get_model_and_serializer(mtype)
+        if not model:
+            return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+        return self.list_or_detail(model, serializer, pk)
+
+    def post(self, request):
+        mtype = request.data.get("type")
+        _, serializer = self.get_model_and_serializer(mtype)
+        if not serializer:
+            return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+        return self.create(serializer, request.data)
+
+    def put(self, request, pk):
+        mtype = request.data.get("type")
+        model, serializer = self.get_model_and_serializer(mtype)
+        if not model:
+            return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+        return self.update(model, serializer, pk, request.data)
+
+    def delete(self, request, pk):
+        mtype = request.query_params.get("type")
+        model, _ = self.get_model_and_serializer(mtype)
+        if not model:
+            return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+        return self.destroy(model, pk)
+    
+        
+class Layout13List(APIView, MasterMixin):
+    TYPE_MAP = {
+        "com": (CompanyMaster, CompanyMasterSerializer),
+    }
+    # Methods same pattern as above...
+    def get(self, request, pk=None):
+        mtype = request.query_params.get("type")
+        model, serializer = self.get_model_and_serializer(mtype)
+        if not model:
+            return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+        return self.list_or_detail(model, serializer, pk)
+
+    def post(self, request):
+        mtype = request.data.get("type")
+        _, serializer = self.get_model_and_serializer(mtype)
+        if not serializer:
+            return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+        return self.create(serializer, request.data)
+
+    def put(self, request, pk):
+        mtype = request.data.get("type")
+        model, serializer = self.get_model_and_serializer(mtype)
+        if not model:
+            return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+        return self.update(model, serializer, pk, request.data)
+
+    def delete(self, request, pk):
+        mtype = request.query_params.get("type")
+        model, _ = self.get_model_and_serializer(mtype)
+        if not model:
+            return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+        return self.destroy(model, pk)    

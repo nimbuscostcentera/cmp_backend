@@ -420,26 +420,10 @@ class DesignMasterSerializer(serializers.ModelSerializer):
 # SystemMaster (FK → CompanyMaster)
 # -----------------------------
 class SystemMasterSerializer(serializers.ModelSerializer):
-    Company_Name = serializers.PrimaryKeyRelatedField(queryset=CompanyMaster.objects.all())
-    Company_ID = serializers.SerializerMethodField()
-    Company_Code = serializers.SerializerMethodField()
-    Company_FullName = serializers.SerializerMethodField()
 
     class Meta:
         model = SystemMaster
-        fields = [
-            "id", "Metal_Type", "System_Name",
-            "Company_Name", "Company_ID", "Company_Code", "Company_FullName"
-        ]
-
-    def get_Company_ID(self, obj):
-        return obj.Company_Name.Company_ID if obj.Company_Name else None
-
-    def get_Company_Code(self, obj):
-        return obj.Company_Name.Company_Code if obj.Company_Name else None
-
-    def get_Company_FullName(self, obj):
-        return obj.Company_Name.Company_Name if obj.Company_Name else None
+        fields = "__all__"
 
 
 

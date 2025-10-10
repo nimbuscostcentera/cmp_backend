@@ -330,6 +330,8 @@ class DesignMaster(models.Model):
     def __str__(self):
         return self.Design_Code
 
+    class Meta:
+        ordering = ["DesignID"]  # Default ordering by DesignID
     # class Meta:
     #     constraints = [
     #         models.UniqueConstraint(

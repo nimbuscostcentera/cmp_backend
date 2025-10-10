@@ -82,7 +82,7 @@ def getlogin(request):
 def edituser(request):
     # print("in edituser")
     user_id = request.data.get('User_ID')
-    contact = request.data.get('contact')
+    contact = request.data.get('Contact')
     password = request.data.get('password')
     User_Name = request.data.get('User_Name')
     UType = request.data.get('UType')
