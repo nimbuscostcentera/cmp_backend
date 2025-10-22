@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from masters.models import UserMaster
+from masters.models import UserMaster,YearMaster
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import make_password, check_password
 
@@ -9,8 +9,9 @@ from django.contrib.auth.hashers import make_password, check_password
 @api_view(['POST'])
 def registeruser(request):
     print("in register")
-    # Map frontend keys to model fields
-    contact = request.data.get('Contact')  # match case
+
+    # Map frontend keys
+    contact = request.data.get('Contact')
     password = request.data.get('Password')
     User_Name = request.data.get('User_Name')
     UType = request.data.get('UType')
@@ -23,8 +24,10 @@ def registeruser(request):
     if UserMaster.objects.filter(Contact=contact).exists():
         return Response({"error": "User already exists"}, status=403)
 
+    # Hash password
     hashed_password = make_password(password)
 
+    # Create user (no year_id)
     user = UserMaster.objects.create(
         Contact=contact,
         Password=hashed_password,
@@ -33,7 +36,10 @@ def registeruser(request):
         active=active,
     )
 
-    return Response({"success": "User registered successfully", "user_id": user.User_ID}, status=201)
+    return Response(
+        {"success": "User registered successfully", "user_id": user.User_ID},
+        status=201
+    )
 
 
 

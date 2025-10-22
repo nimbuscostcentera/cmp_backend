@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from .models import (
-    ColorMaster, DesignDetail, ItemTypeMaster, SizeMaster, StoneRateSetting, StoneRateSettingMiscCharge, UnitMaster, PlatingMaster, MiscChargeMaster,
+    ColorMaster, DesignDetail, ItemTypeMaster, MappingTC, SizeMaster, StoneRateSetting, StoneRateSettingMiscCharge, UnitMaster, PlatingMaster, MiscChargeMaster,
     DesignGroupMaster, ItemMaster, DepartmentMaster, StoneMaster,
     ArtisanMaster, DealerMaster, StaffMaster, CustomerMaster,
     RawMaterialMaster, ProcessMaster, PlatingPolishMaster, DesignMaster,
@@ -34,6 +34,18 @@ def unique_code_validator(model, field_name, incoming_name, friendly_name):
 # -----------------------------
 # Base Serializers (no FKs)
 # -----------------------------
+
+
+
+
+class MappingTCSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MappingTC
+        fields = '__all__'
+        read_only_fields = ('ID', 'Trancode')
+        
+        
+        
 class ColorMasterSerializer(serializers.ModelSerializer):
     class Meta:
         model = ColorMaster
@@ -473,6 +485,7 @@ class StoneRateSettingSerializer(serializers.ModelSerializer):
             "CP",
             "SP",
             "Details",
+            "Tolerance_Upper", "Tolerance_Lower"
         ]
 
     def create(self, validated_data):
@@ -542,7 +555,7 @@ class DesignMasterSerializer(serializers.ModelSerializer):
         fields = [
             "DesignID", "Design_Code",
             "Design_Description", "Design_Group", "ID_master",
-            "Picture", "Gross_Weight", "Tolerance_Lower",
+            "Picture",  "Tolerance_Lower",
             "Tolerance_Upper", "Details","dgm_name","item_name"
         ]
 

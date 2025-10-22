@@ -1,6 +1,26 @@
 from django.db import models
 from django.forms import ValidationError
 
+
+
+# =============================================================
+# Mapping TC
+# =============================================================
+class MappingTC(models.Model):
+    ID = models.BigAutoField(primary_key=True)
+    Trancode = models.CharField(max_length=10, default='OPE', editable=False)
+    Interface = models.CharField(max_length=255)
+    Table_Name = models.CharField(max_length=255)
+    Prefix_Voucher = models.CharField(max_length=255)
+    Max_Serial = models.CharField(max_length=6, default='000000', editable=False)
+    maxlength = models.BigIntegerField(default=30)
+    id_enum=models.CharField(max_length=120,default='null')
+
+    def __str__(self):
+        return f"{self.Trancode} - {self.Prefix_Voucher} - {self.Max_Serial}"
+
+
+
 # Create your models here.
 # All Codes to be Non-Editable, all mandatory fields should have '*'
 class CompanyMaster(models.Model):
@@ -26,20 +46,25 @@ class YearMaster(models.Model):
         return self.Year_Code
 
 class UserMaster(models.Model):
-    User_ID=models.AutoField(primary_key=True)
-    User_Name=models.CharField(max_length=255)
-    Contact=models.CharField(max_length=30)
-    Password=models.CharField(max_length=255)
-    TYPE_A='S'
-    TYPE_B='A'
-    TYPE_C='U'
-    USER_CHOICES=[
-        (TYPE_A,'SuperUser'),
-        (TYPE_B,'Admin'),
-        (TYPE_C,'User'),
+    User_ID = models.AutoField(primary_key=True)
+    User_Name = models.CharField(max_length=255)
+    Contact = models.CharField(max_length=30)
+    Password = models.CharField(max_length=255)
+
+    TYPE_A = 'S'
+    TYPE_B = 'A'
+    TYPE_C = 'U'
+    USER_CHOICES = [
+        (TYPE_A, 'SuperUser'),
+        (TYPE_B, 'Admin'),
+        (TYPE_C, 'User'),
     ]
-    UType=models.CharField(max_length=1,choices=USER_CHOICES)
-    active=models.BooleanField(default=True)
+    UType = models.CharField(max_length=1, choices=USER_CHOICES)
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.User_Name
+
 
     def __str__(self):
         return self.User_Name
@@ -283,6 +308,8 @@ class StoneRateSetting(models.Model):
     Weight = models.DecimalField(max_digits=10, decimal_places=3)
     CP = models.DecimalField(max_digits=8, decimal_places=2)
     SP = models.DecimalField(max_digits=8, decimal_places=2)
+    Tolerance_Lower = models.IntegerField(default=0)
+    Tolerance_Upper = models.IntegerField(default=0)
 
     def __str__(self):
         return str(self.ID)
@@ -296,7 +323,7 @@ class StoneRateSettingMiscCharge(models.Model):
         db_column="ID_Header"   # 👈 Forces column name
     )
     ID_MiscCharge = models.ForeignKey(MiscChargeMaster, on_delete=models.PROTECT)
-    Amount = models.DecimalField(max_digits=8, decimal_places=2)
+    Amount = models.DecimalField(max_digits=9, decimal_places=2)
 
     def __str__(self):
         return str(self.ID)
@@ -316,11 +343,9 @@ class DesignMaster(models.Model):
     ID_StoneM = models.ForeignKey(StoneMaster, on_delete=models.PROTECT,default=1)
     ID_StoneS = models.ForeignKey(StoneSubMaster, on_delete=models.PROTECT,default=1)
     Pcs = models.IntegerField(default=1)
-    Weight = models.DecimalField(max_digits=9, decimal_places=3, editable=False,default=0)
     Picture = models.ImageField(upload_to='design_pictures/', null=True, blank=True)
-    Gross_Weight = models.DecimalField(max_digits=9, decimal_places=3)
-    Tolerance_Lower = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
-    Tolerance_Upper = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    Tolerance_Lower = models.IntegerField(default=0)
+    Tolerance_Upper = models.IntegerField(default=0)
 
     def save(self, *args, **kwargs):
         if self.ID_StoneS:
@@ -331,7 +356,7 @@ class DesignMaster(models.Model):
         return self.Design_Code
 
     class Meta:
-        ordering = ["DesignID"]  # Default ordering by DesignID
+        ordering = ["DesignID"]  # Default ordering by DesignID 
     # class Meta:
     #     constraints = [
     #         models.UniqueConstraint(
@@ -373,3 +398,38 @@ class DesignItemType(models.Model):
 
     def __str__(self):
         return str(self.ID)
+    
+    
+
+
+
+# ==============================================================
+# Vendor & Customer Masters
+# ==============================================================
+class VendorGroupMaster(models.Model):
+    VendorGrp_ID = models.BigAutoField(primary_key=True)
+    VendorGrp_Code = models.CharField(max_length=100, unique=True,null=True,blank=True)
+    ID_CHOICES = [
+        ("A", "Artisan"),
+        ("D", "Dealer"),
+        ("S", "Staff"),
+    ]
+    ID_Type = models.CharField(max_length=1, choices=ID_CHOICES, default="A")
+    Has_Process = models.BooleanField(default=False, null=True, blank=True)
+
+    def __str__(self):
+        return self.VendorGrp_Code
+
+
+class VendorMaster(models.Model):
+    Vendor_ID = models.BigAutoField(primary_key=True)
+    ID_master = models.ForeignKey(VendorGroupMaster, on_delete=models.PROTECT)
+    Vendor_Code = models.CharField(max_length=6, unique=True,null=True,blank=True)
+    Vendor_Name = models.CharField(max_length=60,null=True,blank=True)
+    Address1 = models.CharField(max_length=255, blank=True, null=True)
+    Address2 = models.CharField(max_length=255, blank=True, null=True)
+    Address3 = models.CharField(max_length=255, blank=True, null=True)
+    Contact = models.CharField(max_length=10, blank=True, null=True)
+
+    def __str__(self):
+        return self.Vendor_Name 

@@ -10,7 +10,7 @@ from django.db import transaction
 from django.db.models import Sum
 from decimal import Decimal
 from .models import (
-    CompanyMaster, DesignItemType, ItemTypeMaster, StoneRateSetting, StoneRateSettingMiscCharge, YearMaster, UserMaster, UnitMaster, SizeMaster,
+    CompanyMaster, DesignItemType, ItemTypeMaster, MappingTC, StoneRateSetting, StoneRateSettingMiscCharge, YearMaster, UserMaster, UnitMaster, SizeMaster,
     StoneMaster, StoneSubMaster, ColorMaster, PlatingMaster,
     MiscChargeMaster, PlatingPolishMaster, ItemMaster, DesignGroupMaster,
     SystemMaster, RawMaterialMaster, ProcessMaster, DepartmentMaster, StaffMaster, ArtisanMaster,
@@ -21,6 +21,7 @@ from .serializers import (
     CompanyMasterSerializer,
     DesignItemTypeDetailSerializer,
     ItemTypeMasterSerializer,
+    MappingTCSerializer,
     StoneRateSettingMiscChargeSerializer,
     StoneRateSettingSerializer,
     UnitMasterSerializer, SizeMasterSerializer, StoneMasterSerializer,
@@ -96,6 +97,42 @@ class HelloAPI(APIView):
 # -------------------------------
 # Layout APIs
 # -------------------------------
+
+
+
+class UpdatePrefixVoucherView(APIView):
+    def post(self, request):
+        data = request.data  # Expecting a list of {"Tc": "...", "Pvoucher": "..."}
+        updated_items = []
+        not_found = []
+        for item in data:
+            tc = item.get('Tc')
+            prefix = item.get('Prefix_Voucher')
+            maxlen = item.get('maxlength')
+            Max_Serial = item.get('Max_Serial')
+            id_enum=item.get('id_enum')
+            if tc and prefix:
+                # updated = MappingTC.objects.filter(Trancode=tc).update(maxlength=maxlen, Prefix_Voucher=prefix)
+                updated = MappingTC.objects.filter(Trancode=tc).update(maxlength=maxlen, Prefix_Voucher=prefix, Max_Serial=Max_Serial,id_enum=id_enum)
+                if updated:
+                    updated_items.append(tc)
+                else:
+                    not_found.append(tc)
+            else:
+                not_found.append(tc or 'Unknown')
+        return Response({
+            "status": "success",
+            "updated": updated_items,
+            "not_found": not_found
+        }, status=status.HTTP_200_OK)
+    def get(self, request):
+        mappings = MappingTC.objects.all()
+        serializer = MappingTCSerializer(mappings, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+    
+    
 class Layout1List(APIView, MasterMixin):
     """
     Handles: ColorMaster, MiscChargeMaster, DesignGroupMaster, ItemMaster, SizeMaster, PlatingMaster, ItemTypeMaster
@@ -636,7 +673,7 @@ class Layout9List(APIView, MasterMixin):
                 return Response({"message": "ID_Header is required for item type fetch"},
                                 status=status.HTTP_400_BAD_REQUEST)
             # queryset = model.objects.filter(ID_Header_id=header_id)
-            queryset = model.objects.filter(ID_Header_id=header_id).order_by("DesignID")
+            queryset = model.objects.filter(ID_Header_id=header_id).order_by("ID")
             
             return Response(serializer(queryset, many=True).data)
 

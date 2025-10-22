@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'rest_framework',
     "masters",
     "myauth",
+    "setup",
+    "opening",
 ]
 
 MIDDLEWARE = [

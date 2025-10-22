@@ -24,4 +24,6 @@ urlpatterns = [
     # WebApp Endpoints:
     path('api/v1/masters/',include('masters.urls')),
     path('api/v1/myauth/',include('myauth.urls')),
+    path('api/v1/setup/',include('setup.urls')),
+    path('api/v1/opening/',include('opening.urls')),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
