@@ -82,12 +82,10 @@ class OpeningList(APIView):
             return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
 
         # ----------------------------
-        # DESIGN HEADER: with nested stones/colors
+        # CASE 1: DESIGN HEADER CREATION
         # ----------------------------
         if mtype == "design_header":
             data = request.data.copy()
-
-            # Extract nested stones and colors safely
             stones = data.pop("stones", [])
             colors = data.pop("colors", [])
 
@@ -95,81 +93,164 @@ class OpeningList(APIView):
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            instance = serializer.save()  # Create Header first
+            header_instance = serializer.save()
 
-            # Validate and save stones
+            # Save stones if provided
             if stones:
-                # Validate required fields rule:
                 for stone in stones:
-                    if stone.get("ID_StoneM") and stone.get("ID_StoneS"):
-                        missing = [
-                            key for key in ["Pcs", "Weight", "ID_Color"]
-                            if not stone.get(key)
-                        ]
-                        if missing:
-                            return Response(
-                                {"error": f"Missing mandatory fields {missing} when both ID_StoneM and ID_StoneS exist"},
-                                status=status.HTTP_400_BAD_REQUEST,
-                            )
-
-                    # Set foreign key Header
-                    stone["Header"] = instance.ID
-
+                    stone["Header"] = header_instance.ID
                 stone_serializer = OpeningDesignStockStoneSerializer(data=stones, many=True)
-                if stone_serializer.is_valid():
-                    stone_serializer.save()
-                else:
-                    # Rollback header if stones invalid
+                if not stone_serializer.is_valid():
                     transaction.set_rollback(True)
                     return Response(stone_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                stone_serializer.save()
 
-            # Validate and save colors
+            # Save colors if provided
             if colors:
                 for color in colors:
-                    color["Header"] = instance.ID
-
+                    color["Header"] = header_instance.ID
                 color_serializer = OpeningDesignStockColorSerializer(data=colors, many=True)
-                if color_serializer.is_valid():
-                    color_serializer.save()
-                else:
+                if not color_serializer.is_valid():
                     transaction.set_rollback(True)
                     return Response(color_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                color_serializer.save()
 
             return Response(
-                {"message": "Header, Stones, and Colors created successfully", "ID": instance.ID},
+                {"message": "Design header created successfully", "ID": header_instance.ID},
                 status=status.HTTP_201_CREATED,
             )
 
         # ----------------------------
-        # Other (simple) types
+        # CASE 2: DESIGN STONE / COLOR CREATION
         # ----------------------------
-        serializer = serializer_class(data=request.data, many=isinstance(request.data, list))
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": f"{mtype} record(s) added successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        elif mtype in ["design_stone", "design_color"]:
+            header_id = request.data.get("Header")
+            if not header_id:
+                return Response({"message": "Header is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Verify header exists
+            header_instance = OpeningDesignStock.objects.filter(pk=header_id).first()
+            if not header_instance:
+                return Response(
+                    {"message": f"Design header with ID {header_id} not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            raw_data = request.data.get("data", [])
+            if isinstance(raw_data, str):
+                try:
+                    raw_data = json.loads(raw_data)
+                except json.JSONDecodeError:
+                    raw_data = []
+
+            if not isinstance(raw_data, list):
+                raw_data = [raw_data]
+
+            # Attach header ID to all rows
+            for row in raw_data:
+                row["Header"] = header_id
+
+            serializer = serializer_class(data=raw_data, many=True)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            created_instances = serializer.save()
+
+            # ----------------------------
+            # ✅ Update parent ColorS only when adding design_color
+            # ----------------------------
+            if mtype == "design_color":
+                new_color_ids = [str(item.Color_id) for item in created_instances if hasattr(item, "Color_id")]
+                existing_colors = [c for c in header_instance.ColorS.split(",") if c.strip()] if header_instance.ColorS else []
+                
+                # Append unique new colors
+                updated_colors = list(dict.fromkeys(existing_colors + new_color_ids))
+                header_instance.ColorS = ",".join(updated_colors)
+                header_instance.save()
+
+            return Response(
+                {"message": f"{mtype.replace('design_', '').capitalize()} added successfully"},
+                status=status.HTTP_201_CREATED,
+            )
+
+        # ----------------------------
+        # CASE 3: OTHER TYPES (RAW/STONE SELF/VENDOR)
+        # ----------------------------
+        else:
+            serializer = serializer_class(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": f"{mtype} created successfully"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
     @transaction.atomic
     def put(self, request, pk):
         mtype = request.data.get("type")
         model, serializer_class = self.get_model_and_serializer(mtype)
+        
         if not model:
             return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
 
         instance = get_object_or_404(model, pk=pk)
         serializer = serializer_class(instance, data=request.data, partial=True)
+        
         if serializer.is_valid():
-            serializer.save()
+            serializer.save()  # Update subtable first
+
+            # -----------------------------
+            # If updating design_color, update parent header ColorS from request
+            # -----------------------------
+            if mtype == "design_color" and "ColorS" in request.data:
+                header_id = instance.Header_id  # FK to parent header
+                header_instance = OpeningDesignStock.objects.get(pk=header_id)
+                header_instance.ColorS = request.data["ColorS"]  # directly use payload
+                header_instance.save()
+
             return Response({"message": f"{mtype} updated successfully"}, status=status.HTTP_200_OK)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     @transaction.atomic
     def delete(self, request, pk):
         mtype = request.query_params.get("type")
         model, _ = self.get_model_and_serializer(mtype)
+
         if not model:
             return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+
         instance = get_object_or_404(model, pk=pk)
+
+        # -----------------------------
+        # If deleting a design_color row, update parent header's ColorS
+        # -----------------------------
+        if mtype == "design_color":
+            header_id = instance.Header_id  # FK reference to OpeningDesignStock
+            from .models import OpeningDesignStock  # avoid circular imports
+
+            header_instance = OpeningDesignStock.objects.filter(pk=header_id).first()
+
+            if header_instance and header_instance.ColorS:
+                # Convert the ColorS field ("3,2,7") into a list
+                color_ids = [c for c in header_instance.ColorS.split(",") if c.strip()]
+
+                # Get the color ID from the record being deleted
+                color_to_remove = str(instance.Color_id)  # ✅ corrected
+
+                # Remove it from the list if present
+                if color_to_remove in color_ids:
+                    color_ids.remove(color_to_remove)
+
+                # Save the updated ColorS string
+                header_instance.ColorS = ",".join(color_ids)
+                header_instance.save()
+
+        # -----------------------------
+        # Delete the actual record
+        # -----------------------------
         instance.delete()
         return Response({"message": f"{mtype} deleted successfully"}, status=status.HTTP_200_OK)
+
+
+

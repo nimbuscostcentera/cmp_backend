@@ -31,11 +31,20 @@ class SetupInfo(models.Model):
         default=False,
         help_text="If True, allows negative raw material stock."
     )
+    
 
     # If True → enables stone issue feature
     OrderStoneValid = models.BooleanField(
         default=False,
         help_text="If True, enables the stone issue feature."
+    )
+    # :white_tick: New Field: Voucher Number control
+    AutoVoucher = models.BooleanField(
+        default=False,
+        help_text=(
+            "If False → Auto mode (voucher number generated automatically, user cannot edit). "
+            "If True → Auto + Manual (user can override voucher number)."
+        )
     )
 
     def __str__(self):
